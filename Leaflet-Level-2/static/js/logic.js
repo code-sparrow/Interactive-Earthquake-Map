@@ -1,46 +1,79 @@
 // Store our API endpoint inside queryUrl
-var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
-//https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json
+var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+var faultUrl = "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json";
 
 // Perform a GET request to the query URL
 d3.json(queryUrl, function(data) {
-    //console.log(data);
-    //console.log(data.features);
-    // Using the features array sent back in the API data, create a GeoJSON layer and add it to the map
-    createFeatures(data.features, heatmapData(data));
+    d3.json(faultUrl, function(data2) {
+    // Once we get a response, send the data.features object to the createFeatures function
+        console.log(data);
+        console.log(data2);
+        createFeatures(data.features, data2.features);
+    });
 });
 
-function heatmapData(data) {
-    let col = [];
-    data.features.forEach(feature => {
-        tmp = {lat: feature.geometry.coordinates[1] , lng: feature.geometry.coordinates[0], count: feature.properties.mag};
-        col.push(tmp);
-    });
-    return {max: 8, data: col};
-};
 
-function createFeatures(earthquakeData, heatmapdata) {
 
-    // Define a function we want to run once for each feature in the features array
-    // Give each feature a popup describing the place and time of the earthquake
-    function onEachFeature(feature, layer) {
-        layer.bindPopup("<h3>" + feature.properties.place +
-        "</h3><hr><p>" + new Date(feature.properties.time) + "</p>");
-    }
-   
-    // Create a GeoJSON layer containing the features array on the earthquakeData object
-    // Run the onEachFeature function once for each piece of data in the array
-    var earthquakes = L.geoJSON(earthquakeData, {
-        onEachFeature: onEachFeature
+function createFeatures(earthquakeData, faultData) {
+    // reorder data based on magnitude so smaller circles are always drawn on top of larger circles
+    earthquakeData = earthquakeData.slice().sort((a, b) => d3.descending(a.properties.mag, b.properties.mag));
+
+    // An array which will be used to store created earthquakeMarkers
+    var earthquakeMarkers = [];
+    var faultMarkers = [];
+
+    // for each feature in the earthquakeData array, add circle to marker array
+    earthquakeData.forEach(feature => {
+        // coordinates lat/lng, for circle center
+        var coord = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
+        //console.log(feature.properties.mag, feature.properties.place, Date(feature.properties.time));
+        // push it to the earthquakeMarkers array
+        earthquakeMarkers.push(
+            L.circle(coord, {
+                fillOpacity: 0.65,
+                color: "#563E04",
+                weight: 0.7,
+                fillColor: c_color(feature.properties.mag),
+                // Adjust radius
+                radius: feature.properties.mag * 16000
+            }).bindPopup("<h3>" + feature.properties.place +
+            "</h3><hr><p>" + new Date(feature.properties.time) + "</p>")
+        )
     });
-    console.log(earthquakeData)
-    console.log(earthquakes)
-    // Sending our earthquakes layer to the createMap function
-    createMap(earthquakes, heatmapdata);
+
+    faultData.forEach(feature => {
+
+        //Coordinate pairs from GeoJSON were not consistent with leaflet
+        //and had to be flipped (as in the earthquakeData)
+        var line = [];
+        feature.geometry.coordinates.forEach(pair => {
+            line.push([pair[1], pair[0]])});
+
+        faultMarkers.push(
+            L.polyline(line, {
+                color: "yellow"
+            })
+        );
+    });
+
+    // Add all the earthquakeMarkers to a new layer group.
+    // Now we can handle them as one group instead of referencing each individually
+    var markerLayer = L.layerGroup(earthquakeMarkers);
+    var markerLayer2 = L.layerGroup(faultMarkers);
+
+    createMap(markerLayer, markerLayer2);
+
 }
 
-function createMap(earthquakes, heatmapdata) {
-    // Define streetmap and darkmap layers
+function createMap(earthquakes, faults) {
+    // Define basemap tile layers
+    var graymap = L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
+        attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+        maxZoom: 18,
+        id: "mapbox.light",
+        accessToken: API_KEY
+    });
+
     var streetmap = L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
         attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
         maxZoom: 18,
@@ -63,59 +96,86 @@ function createMap(earthquakes, heatmapdata) {
         ext: 'jpg'
     });
 
-    var cfg = {
-        // radius should be small ONLY if scaleRadius is true (or small radius is intended)
-        // if scaleRadius is false it will be the constant radius used in pixels
-        "radius": 1.5,
-        "maxOpacity": .6,
-        // scales the radius based on map zoom
-        "scaleRadius": true,
-        // if set to false the heatmap uses the global maximum for colorization
-        // if activated: uses the data maximum within the current map boundaries
-        //   (there will always be a red spot with useLocalExtremas true)
-        "useLocalExtrema": true,
-        // which field name in your data represents the latitude - default "lat"
-        latField: 'lat',
-        // which field name in your data represents the longitude - default "lng"
-        lngField: 'lng',
-        // which field name in your data represents the data value - default "value"
-        valueField: 'count'
-    };
-
-    var heatmapLayer = new HeatmapOverlay(cfg);
-
-
     // Define a baseMaps object to hold our base layers
     var baseMaps = {
+        "Gray-Scale Map": graymap,
         "Street Map": streetmap,
         "Dark Map": darkmap,
         "Watercolor Map": watercolor
     };
 
-        // Create overlay object to hold our overlay layer
-        var overlayMaps = {
+    // Create overlay object to hold our overlay layer
+    var overlayMaps = {
         Earthquakes: earthquakes,
-        HeatMap: heatmapLayer
-        };
+        Faults: faults
+    };
 
-    // Create a new map
+    // Create our map, giving it the streetmap and earthquakes layers to display on load
     var myMap = L.map("map", {
         center: [
-        37.09, -95.71
+            37.09, -98.71
         ],
         zoom: 4,
-        layers: [streetmap, earthquakes]
+        // fault and earthquake overlays checked by default
+        layers: [watercolor, faults, earthquakes]
     });
 
-    heatmapLayer.setData(heatmapdata);
-
-    // Create a layer control containing our baseMaps
-    // Be sure to add an overlay Layer containing the earthquake GeoJSON
+    // Create a layer control
+    // Pass in our baseMaps and overlayMaps
+    // Add the layer control to the map
     L.control.layers(baseMaps, overlayMaps, {
         collapsed: false
     }).addTo(myMap);
 
-    //function $(x) {return document.getElementById(x);}
-    //console.log(overlayMaps);
-    //$('<h6 id="mapTitle">BikeMapCode sample</h6>').insertBefore('div.leaflet-control-layers-base');
-}
+
+    //------------------------------------
+    // Set up the legend
+    var legend = L.control({position: 'bottomright'});
+
+    legend.onAdd = function(map) {
+
+        var div = L.DomUtil.create('div', 'info legend'),
+            grades = [0, 1, 2, 3, 4, 5],
+            labels = ['<h4> Magnitude </h4><hr>'];
+
+    // loop through our density intervals and generate a label with a colored square for each interval
+        for (var i = 0; i < grades.length; i++) {
+            labels.push(
+                '<i style="background:' + c_color(grades[i] + 0.1) + '"></i> ' +
+                '<p>' + grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<hr>' : '+' + '</p>')
+            );
+        }
+        //add fault line to legend
+        labels.push('<hr><h4>Fault Lines</h4><hr color="yellow" width="60%" size="5px">');
+        div.innerHTML = labels.join('');
+        console.log(div.innerHTML);
+    return div;
+    
+    };
+    console.log(c_color(1));
+    legend.addTo(myMap);
+};
+
+// Color function for feature magnitude
+function c_color(mag) { 
+
+    if (mag > 5) {
+        return "#B90202";
+    } 
+    else if (mag > 4) {
+        return "#B94702";
+    }
+    else if (mag > 3) {
+        return "#B97C02";
+    }
+    else if (mag > 2) {
+        return "#B9A302";
+    }
+    else if (mag > 1) {
+        return "#92B902";
+    }
+    else {
+        return "#28CA03";
+    }
+};
+
