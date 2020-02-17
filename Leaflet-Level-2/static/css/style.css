@@ -38,3 +38,21 @@ html {
   margin: 3px 3px 6px;
   color: #777;
 }
+
+.leaflet-popup-content{
+  text-align: center;
+  color: #ECE3DC;
+}
+.leaflet-popup-content-wrapper{
+  background-color: #BD8A37;
+}
+
+.toolTipPopup {
+  background-color: #BD8A37;
+  text-align: center;
+  color: #ECE3DC;
+  border-color: #BD8A37;
+  border-radius: 5px;
+}
+
+

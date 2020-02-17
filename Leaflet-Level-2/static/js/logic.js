@@ -35,9 +35,10 @@ function createFeatures(earthquakeData, faultData) {
                 weight: 0.7,
                 fillColor: c_color(feature.properties.mag),
                 // Adjust radius
-                radius: feature.properties.mag * 16000
-            }).bindPopup("<h3>" + feature.properties.place +
-            "</h3><hr><p>" + new Date(feature.properties.time) + "</p>")
+                radius: feature.properties.mag * 50000
+            }).bindPopup(`<h3>${feature.properties.place}</h3><hr>
+            <p>${new Date(feature.properties.time)}</p><hr>
+            <p><b>Magnitude: &nbsp </b> ${feature.properties.mag}</p>`)
         )
     });
 
@@ -48,11 +49,12 @@ function createFeatures(earthquakeData, faultData) {
         var line = [];
         feature.geometry.coordinates.forEach(pair => {
             line.push([pair[1], pair[0]])});
-
+        //console.log(feature.properties.name);
         faultMarkers.push(
             L.polyline(line, {
                 color: "yellow"
-            })
+            }).bindTooltip(`<h4>Boundry Name</h4><hr>
+            <h5>${feature.properties.Name}</h5>`, {className: "toolTipPopup"})
         );
     });
 
@@ -117,7 +119,7 @@ function createMap(earthquakes, faults) {
         ],
         zoom: 4,
         // fault and earthquake overlays checked by default
-        layers: [watercolor, faults, earthquakes]
+        layers: [graymap, faults, earthquakes]
     });
 
     // Create a layer control
