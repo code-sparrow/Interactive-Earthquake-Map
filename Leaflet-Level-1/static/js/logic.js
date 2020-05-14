@@ -4,7 +4,7 @@ var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_we
 // Perform a GET request to the query URL
 d3.json(queryUrl, function(data) {
     // Once we get a response, send the data.features object to the createFeatures function
-    console.log(data);
+    console.log(data.features);
     createFeatures(data.features);
 });
 
@@ -21,7 +21,7 @@ function createFeatures(earthquakeData) {
     earthquakeData.forEach(feature => {
         // coordinates lat/lng, for circle center
         var coord = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
-        console.log(feature.properties.mag, feature.properties.place, Date(feature.properties.time));
+        
         // push it to the earthquakeMarkers array
         earthquakeMarkers.push(
             L.circle(coord, {
