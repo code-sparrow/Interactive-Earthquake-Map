@@ -28,13 +28,14 @@ The USGS is responsible for providing scientific data about natural hazards, the
 * Created a map using Leaflet plotting the earthquakes based on their longitude and latitude  
 * The data markers' size and color were based on the magnitudes  
 * Marker popups included additional information for the earthquake (Location, Date, and Magnitude)  
-* Fault Line data was also visualized using Leaflet, and popups displayed the boudary name  
-* A legend was included that allowed users to select from one base map, one time span, and a check box for fault lines to be on or off  
+* Fault Line data was also visualized using Leaflet, and popups displayed the boundary name  
+* A legend associates the magnitude with the corresponding color  
+* A layer control box allows users to select from one base map, one time span, and a check box for fault lines to be on or off  
 
 
 ## Results  
 
-### Below are links to the resulting maps. The last one, loading earthquake data for hour, day, week, and month, is currently slow loading.  
+Below are links to the resulting maps. The last one, loading earthquake data for hour, day, week, and month, is currently slow loading.  
 
 * [Past Week Only](https://code-sparrow.github.io/Interactive-Earthquake-Map/Leaflet-Level-1)  
 * [Past Week with Fault Lines](https://code-sparrow.github.io/Interactive-Earthquake-Map/Leaflet-Level-2)  
