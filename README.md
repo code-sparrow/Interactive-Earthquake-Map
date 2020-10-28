@@ -1,4 +1,4 @@
-# Interactive Earthquake Map  
+# **_Interactive Earthquake Map_**  
 
 Using JavaScript, Leaflet, and data from USGS to visualize recent earthquake activity with an interactive map.  
 
